@@ -40,7 +40,10 @@ client = AzureOpenAI(
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Render template via the Jinja2 environment to avoid passing the context into get_template()
+    template = templates.env.get_template("index.html")
+    content = template.render(request=request)
+    return HTMLResponse(content)
 
 
 @app.post("/chat")
