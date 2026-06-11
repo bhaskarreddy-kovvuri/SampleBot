@@ -1,5 +1,5 @@
 # ...existing code...
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
@@ -47,7 +47,30 @@ def home(request: Request):
 
 
 @app.post("/chat")
-async def chat(user_input: str):
+async def chat(request: Request):
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # support both { "message": "..." } and OpenAI-like {"messages":[{role:..., content:...}]}
+    user_input = None
+    if isinstance(data, dict):
+        if "message" in data:
+            user_input = data["message"]
+        elif "user_input" in data:
+            user_input = data["user_input"]
+        elif "messages" in data and isinstance(data["messages"], list) and len(data["messages"]) > 0:
+            for m in reversed(data["messages"]):
+                if m.get("role") == "user" and "content" in m:
+                    user_input = m["content"]
+                    break
+            if user_input is None:
+                user_input = data["messages"][0].get("content")
+
+    if not user_input:
+        raise HTTPException(status_code=400, detail="Missing 'message' in request body")
+
     response = client.chat.completions.create(
         model=deployment,
         messages=[
