@@ -1,2 +1,2 @@
 # SampleBot
-YES
+YES BOSS
